@@ -14,10 +14,10 @@ export default async function HomePage() {
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#39ff88]">FC26 Community</p>
             <h1 className="mt-4 max-w-3xl text-5xl font-black leading-tight text-white md:text-7xl">
-              Fixtures, posters, standings, and collections in one command center.
+              FC Community Dashboard. One Community. One Dashboard. Every Match Matters.
             </h1>
             <p className="mt-5 max-w-2xl text-lg text-[#a9beb0]">
-              Public fans can browse published activity. Admins manage every record securely through Supabase-backed tools.
+              Community FC26 ultimate team. Discover tournaments, fixtures, posters, and collections. Join the community and stay updated on all things FC26 Ultimate Team.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild>
