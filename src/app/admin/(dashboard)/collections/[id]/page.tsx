@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { addCollectionParticipant, updateCollectionParticipant, updateRecord } from "@/lib/actions/admin-records";
+import { addCollectionParticipant, recordCollectionPayment, updateCollectionParticipant, updateRecord } from "@/lib/actions/admin-records";
 import { getAdminCollectionDetail, getAdminTournaments } from "@/lib/data/admin";
 import { formatDate } from "@/lib/utils";
 import { formatMYR } from "@/lib/services/payments";
@@ -25,6 +25,7 @@ export default async function AdminCollectionDetailPage({
   const addParticipant = addCollectionParticipant.bind(null, id);
   const updateParticipant = updateCollectionParticipant.bind(null, id);
   const updateCollection = updateRecord.bind(null, "collections", id);
+  const recordPayment = recordCollectionPayment.bind(null, id);
 
   return (
     <div className="space-y-6">
@@ -147,7 +148,8 @@ export default async function AdminCollectionDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {detail.collectionParticipants.map((row) => (
-            <form key={row.id} action={updateParticipant} className="rounded-lg border border-[#1d3326] p-4">
+            <div key={row.id} className="rounded-lg border border-[#1d3326] p-4">
+            <form action={updateParticipant}>
               <input type="hidden" name="id" value={row.id} />
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -187,6 +189,44 @@ export default async function AdminCollectionDetailPage({
                 </div>
               </div>
             </form>
+            <form action={recordPayment} className="mt-4 rounded-md border border-[#22372a] bg-[#07100b] p-4">
+              <input type="hidden" name="collection_participant_id" value={row.id} />
+              <input type="hidden" name="participant_id" value={row.participant_id} />
+              <div className="grid gap-4 md:grid-cols-4">
+                <Field label="Payment amount (RM)">
+                  <Input name="amount" type="number" min="0.01" step="0.01" placeholder="20.00" required />
+                </Field>
+                <Field label="Payment method">
+                  <Select name="payment_method" defaultValue="Cash">
+                    {["Cash", "Bank Transfer", "DuitNow", "Touch 'n Go eWallet", "Online Banking", "Other"].map((method) => (
+                      <option key={method}>{method}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Payment date">
+                  <Input name="payment_date" type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+                </Field>
+                <Field label="Verification">
+                  <Select name="verification_status" defaultValue="Verified">
+                    {["Verified", "Pending", "Rejected", "Refunded"].map((status) => (
+                      <option key={status}>{status}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Reference">
+                  <Input name="payment_reference" placeholder="Optional private reference" />
+                </Field>
+                <div className="md:col-span-3">
+                  <Field label="Internal notes">
+                    <Input name="internal_notes" placeholder="Optional admin note" />
+                  </Field>
+                </div>
+                <div className="md:col-span-4">
+                  <Button type="submit">Record payment</Button>
+                </div>
+              </div>
+            </form>
+            </div>
           ))}
           {!detail.collectionParticipants.length ? (
             <p className="rounded-md border border-[#1d3326] p-4 text-sm text-[#9fb6a7]">

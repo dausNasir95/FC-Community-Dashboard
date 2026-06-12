@@ -44,9 +44,11 @@ export function ResourceManager({
         columns={columns}
         actions={(row) => (
           <>
-            {["collections", "posters"].includes(resource) ? (
+            {["collections", "posters", "tournaments"].includes(resource) ? (
               <Button asChild variant="ghost">
-                <Link href={`/admin/${resource}/${String(row.id)}`}>{resource === "collections" ? "Manage / Edit" : "Edit"}</Link>
+                <Link href={`/admin/${resource}/${String(row.id)}`}>
+                  {resource === "collections" || resource === "tournaments" ? "Manage / Edit" : "Edit"}
+                </Link>
               </Button>
             ) : null}
             {["posters", "tournaments", "collections"].includes(resource) ? (

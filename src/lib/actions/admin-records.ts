@@ -51,6 +51,11 @@ export async function updateRecord(table: MutableTable, id: string, formData: Fo
     payload.start_date = String(formData.get("start_date") ?? "") || null;
     payload.due_date = String(formData.get("due_date") ?? "") || null;
   }
+  if (table === "tournaments") {
+    payload.cover_image_url = String(formData.get("cover_image_url") ?? "") || null;
+    payload.registration_url = String(formData.get("registration_url") ?? "") || null;
+    payload.maximum_participants = String(formData.get("maximum_participants") ?? "") || null;
+  }
   const parsed = schemas[table].safeParse(payload);
   const returnPath = `/admin/${table}/${id}`;
   if (!parsed.success) {
@@ -187,4 +192,170 @@ export async function updateCollectionParticipant(collectionId: string, formData
 
   revalidatePath(`/admin/collections/${collectionId}`);
   redirect(`/admin/collections/${collectionId}?success=participant-updated`);
+}
+
+export async function recordCollectionPayment(collectionId: string, formData: FormData) {
+  const admin = await requireAdmin();
+  const collectionParticipantId = String(formData.get("collection_participant_id") ?? "");
+  const participantId = String(formData.get("participant_id") ?? "");
+  const amount = Number(formData.get("amount") ?? 0);
+  const paymentDate = String(formData.get("payment_date") ?? "") || new Date().toISOString();
+  const paymentMethod = String(formData.get("payment_method") ?? "Cash");
+  const verificationStatus = String(formData.get("verification_status") ?? "Verified");
+  const paymentReference = String(formData.get("payment_reference") ?? "") || null;
+  const internalNotes = String(formData.get("internal_notes") ?? "") || null;
+
+  if (!collectionParticipantId || !participantId || amount <= 0) {
+    redirect(`/admin/collections/${collectionId}?error=${encodeURIComponent("Participant payment record and valid RM amount are required.")}`);
+  }
+
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const isVerified = verificationStatus === "Verified";
+    const { error } = await supabase.from("payments").insert({
+      collection_id: collectionId,
+      collection_participant_id: collectionParticipantId,
+      participant_id: participantId,
+      amount,
+      payment_date: paymentDate,
+      payment_method: paymentMethod,
+      payment_reference: paymentReference,
+      verification_status: verificationStatus,
+      verified_by: isVerified ? admin.id : null,
+      verified_at: isVerified ? new Date().toISOString() : null,
+      internal_notes: internalNotes,
+      created_by: admin.id,
+    });
+    if (error) redirect(`/admin/collections/${collectionId}?error=${encodeURIComponent(error.message)}`);
+
+    if (isVerified) {
+      const [{ data: participantRow }, { data: payments }] = await Promise.all([
+        supabase.from("collection_participants").select("required_amount,is_waived").eq("id", collectionParticipantId).single(),
+        supabase.from("payments").select("amount").eq("collection_participant_id", collectionParticipantId).eq("verification_status", "Verified"),
+      ]);
+      const totalPaid = (payments ?? []).reduce((total, payment) => total + Number(payment.amount ?? 0), 0);
+      const requiredAmount = Number(participantRow?.required_amount ?? 0);
+      const nextStatus = participantRow?.is_waived
+        ? "Waived"
+        : totalPaid > requiredAmount
+          ? "Overpaid"
+          : totalPaid === requiredAmount && requiredAmount > 0
+            ? "Paid"
+            : totalPaid > 0
+              ? "Partially Paid"
+              : "Unpaid";
+      await supabase.from("collection_participants").update({ payment_status: nextStatus }).eq("id", collectionParticipantId);
+    }
+
+    await supabase.from("activity_logs").insert({
+      admin_id: admin.id,
+      action: "payment_recorded",
+      entity_type: "payments",
+      entity_id: collectionId,
+      description: `Recorded ${verificationStatus.toLowerCase()} collection payment`,
+    });
+  }
+
+  revalidatePath(`/admin/collections/${collectionId}`);
+  revalidatePath("/collections");
+  redirect(`/admin/collections/${collectionId}?success=payment-recorded`);
+}
+
+export async function addTournamentParticipant(tournamentId: string, formData: FormData) {
+  const admin = await requireAdmin();
+  const participantId = String(formData.get("participant_id") ?? "");
+  const groupName = String(formData.get("group_name") ?? "") || null;
+  const seedNumber = String(formData.get("seed_number") ?? "") ? Number(formData.get("seed_number")) : null;
+
+  if (!participantId) {
+    redirect(`/admin/tournaments/${tournamentId}?error=${encodeURIComponent("Participant is required.")}`);
+  }
+
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const { error } = await supabase.from("tournament_participants").insert({
+      tournament_id: tournamentId,
+      participant_id: participantId,
+      group_name: groupName,
+      seed_number: seedNumber,
+    });
+    if (error) redirect(`/admin/tournaments/${tournamentId}?error=${encodeURIComponent(error.message)}`);
+    await supabase.from("activity_logs").insert({
+      admin_id: admin.id,
+      action: "participant_added",
+      entity_type: "tournament_participants",
+      entity_id: tournamentId,
+      description: "Participant added to tournament",
+    });
+  }
+
+  revalidatePath(`/admin/tournaments/${tournamentId}`);
+  redirect(`/admin/tournaments/${tournamentId}?success=participant-added`);
+}
+
+export async function generateTournamentFixtures(tournamentId: string, formData: FormData) {
+  const admin = await requireAdmin();
+  const startAt = String(formData.get("start_at") ?? "");
+  const roundName = String(formData.get("round_name") ?? "") || "Auto generated";
+
+  if (!startAt) {
+    redirect(`/admin/tournaments/${tournamentId}?error=${encodeURIComponent("Start date is required for generated fixtures.")}`);
+  }
+
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const { data: assigned, error: participantsError } = await supabase
+      .from("tournament_participants")
+      .select("participant_id")
+      .eq("tournament_id", tournamentId)
+      .order("seed_number", { ascending: true, nullsFirst: false });
+    if (participantsError) redirect(`/admin/tournaments/${tournamentId}?error=${encodeURIComponent(participantsError.message)}`);
+
+    const participantIds = (assigned ?? []).map((row) => row.participant_id).filter(Boolean);
+    const fixtures = buildRoundRobinFixtures(tournamentId, participantIds, startAt, roundName, admin.id);
+    if (!fixtures.length) redirect(`/admin/tournaments/${tournamentId}?error=${encodeURIComponent("At least two participants are required.")}`);
+
+    const { error } = await supabase.from("fixtures").insert(fixtures as never);
+    if (error) redirect(`/admin/tournaments/${tournamentId}?error=${encodeURIComponent(error.message)}`);
+    await supabase.from("activity_logs").insert({
+      admin_id: admin.id,
+      action: "fixtures_generated",
+      entity_type: "fixtures",
+      entity_id: tournamentId,
+      description: `Generated ${fixtures.length} tournament fixtures`,
+    });
+  }
+
+  revalidatePath(`/admin/tournaments/${tournamentId}`);
+  revalidatePath("/admin/fixtures");
+  redirect(`/admin/tournaments/${tournamentId}?success=fixtures-generated`);
+}
+
+function buildRoundRobinFixtures(
+  tournamentId: string,
+  participantIds: string[],
+  startAt: string,
+  roundName: string,
+  adminId: string,
+) {
+  const fixtures = [];
+  let matchIndex = 0;
+  for (let i = 0; i < participantIds.length; i += 1) {
+    for (let j = i + 1; j < participantIds.length; j += 1) {
+      const scheduledAt = new Date(startAt);
+      scheduledAt.setHours(scheduledAt.getHours() + matchIndex);
+      fixtures.push({
+        tournament_id: tournamentId,
+        matchday: matchIndex + 1,
+        round_name: roundName,
+        home_participant_id: participantIds[i],
+        away_participant_id: participantIds[j],
+        scheduled_at: scheduledAt.toISOString(),
+        status: "Scheduled",
+        created_by: adminId,
+      });
+      matchIndex += 1;
+    }
+  }
+  return fixtures;
 }

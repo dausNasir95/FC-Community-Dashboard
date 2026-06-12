@@ -64,10 +64,10 @@ export function CollectionCard({ collection }: { collection: Collection }) {
           <div className="mt-4 grid gap-2 text-sm text-[#cbe5d2]">
             <p className="flex items-center gap-2 text-[#39ff88]">
               <CircleDollarSign size={15} />
-              {formatMYR(collection.total_collected ?? 0)} collected
+              {formatMYR(toCents(collection.total_collected ?? 0))} collected
             </p>
-            <p>Target: {formatMYR(collection.target_amount)}</p>
-            <p>Remaining: {formatMYR(collection.remaining_amount ?? collection.target_amount)}</p>
+            <p>Target: {formatMYR(toCents(collection.target_amount))}</p>
+            <p>Remaining: {formatMYR(toCents(collection.remaining_amount ?? collection.target_amount))}</p>
             <p className="flex items-center gap-2">
               <Users size={15} />
               {collection.participant_count ?? 0} participants
@@ -77,6 +77,10 @@ export function CollectionCard({ collection }: { collection: Collection }) {
       </Card>
     </Link>
   );
+}
+
+function toCents(amount: number) {
+  return Number.isInteger(amount) && amount > 1000 ? amount : Math.round(amount * 100);
 }
 
 export function FixtureRow({ fixture }: { fixture: Fixture }) {

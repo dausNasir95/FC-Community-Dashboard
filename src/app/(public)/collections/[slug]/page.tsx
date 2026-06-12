@@ -26,9 +26,9 @@ export default async function CollectionDetailPage({ params }: { params: Promise
             <div className="h-full bg-[#39ff88]" style={{ width: `${Math.min(detail.collection.progress_percentage ?? 0, 100)}%` }} />
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-4">
-            <Metric label="Target" value={formatMYR(detail.collection.target_amount)} />
-            <Metric label="Collected" value={formatMYR(detail.collection.total_collected ?? 0)} />
-            <Metric label="Remaining" value={formatMYR(detail.collection.remaining_amount ?? 0)} />
+            <Metric label="Target" value={formatMYR(toCents(detail.collection.target_amount))} />
+            <Metric label="Collected" value={formatMYR(toCents(detail.collection.total_collected ?? 0))} />
+            <Metric label="Remaining" value={formatMYR(toCents(detail.collection.remaining_amount ?? 0))} />
             <Metric label="Progress" value={`${Math.round(detail.collection.progress_percentage ?? 0)}%`} />
           </div>
         </div>
@@ -44,8 +44,8 @@ export default async function CollectionDetailPage({ params }: { params: Promise
           <Card key={row.id}><CardContent className="pt-5">
             <h3 className="font-bold text-white">{row.participant?.display_name}</h3>
             <p className="text-sm text-[#9fb6a7]">{row.participant?.team_name} · {row.participant?.platform}</p>
-            <p className="mt-3 text-sm text-[#cbe5d2]">Required: {formatMYR(row.required_amount)}</p>
-            <p className="text-sm text-[#cbe5d2]">Outstanding: {formatMYR(row.outstanding_amount ?? row.required_amount)}</p>
+            <p className="mt-3 text-sm text-[#cbe5d2]">Required: {formatMYR(toCents(row.required_amount))}</p>
+            <p className="text-sm text-[#cbe5d2]">Outstanding: {formatMYR(toCents(row.outstanding_amount ?? inferredOutstanding(row.required_amount, row.payment_status)))}</p>
             <div className="mt-3"><StatusBadge status={row.payment_status} /></div>
           </CardContent></Card>
         ))}
@@ -60,4 +60,12 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return <Card><CardContent className="pt-5"><p className="text-sm text-[#8fa298]">{label}</p><p className="mt-2 text-3xl font-black text-[#39ff88]">{value}</p></CardContent></Card>;
+}
+
+function toCents(amount: number) {
+  return Number.isInteger(amount) && amount > 1000 ? amount : Math.round(amount * 100);
+}
+
+function inferredOutstanding(requiredAmount: number, status: string) {
+  return ["Paid", "Overpaid", "Waived", "Refunded", "Cancelled"].includes(status) ? 0 : requiredAmount;
 }

@@ -1,6 +1,6 @@
 import * as mock from "@/lib/mock-data";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/server";
-import type { Collection, CollectionParticipant, ListParams, Paginated, Participant, Poster, Tournament } from "@/types/domain";
+import type { Collection, CollectionParticipant, Fixture, ListParams, Paginated, Participant, Poster, Tournament, TournamentParticipant } from "@/types/domain";
 
 function paginate<T>(rows: T[], params: ListParams = {}): Paginated<T> {
   const page = params.page ?? 1;
@@ -79,6 +79,79 @@ export async function getAdminTournaments() {
   const supabase = await createClient();
   const { data } = await supabase.from("tournaments").select("id,name,slug,status").order("name");
   return (data ?? []) as Tournament[];
+}
+
+export async function getAdminTournamentDetail(id: string) {
+  if (!hasSupabaseEnv()) {
+    const tournament = mock.tournaments.find((row) => row.id === id) ?? null;
+    return {
+      tournament,
+      tournamentParticipants: mock.tournamentParticipants.filter((row) => row.tournament_id === id),
+      participants: mock.participants,
+      fixtures: mock.fixtures.filter((row) => row.tournament_id === id),
+    };
+  }
+
+  const supabase = await createClient();
+  const [{ data: tournament }, { data: tournamentParticipants }, { data: participants }, { data: fixtures }] = await Promise.all([
+    supabase.from("tournaments").select("*").eq("id", id).single(),
+    supabase
+      .from("tournament_participants")
+      .select("*, participant:participants(id, display_name, ea_id, psn_id, platform, team_name, social_username, status)")
+      .eq("tournament_id", id)
+      .order("seed_number", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("participants")
+      .select("id, display_name, ea_id, psn_id, platform, team_name, social_username, status")
+      .neq("status", "Archived")
+      .order("display_name"),
+    supabase
+      .from("fixtures")
+      .select("*, home_participant:participants!fixtures_home_participant_id_fkey(id, display_name), away_participant:participants!fixtures_away_participant_id_fkey(id, display_name)")
+      .eq("tournament_id", id)
+      .order("scheduled_at"),
+  ]);
+
+  return {
+    tournament: tournament as Tournament | null,
+    tournamentParticipants: (tournamentParticipants ?? []) as unknown as TournamentParticipant[],
+    participants: (participants ?? []) as Participant[],
+    fixtures: (fixtures ?? []) as unknown as Fixture[],
+  };
+}
+
+export async function getAdminFixtureRows(params: ListParams = {}) {
+  if (!hasSupabaseEnv()) {
+    return paginate(
+      mock.fixtures.map((fixture) => ({
+        ...fixture,
+        tournament_name: fixture.tournament?.name ?? fixture.tournament_id,
+        home_name: fixture.home_participant?.display_name ?? fixture.home_participant_id,
+        away_name: fixture.away_participant?.display_name ?? fixture.away_participant_id,
+      })),
+      params,
+    );
+  }
+
+  const supabase = await createClient();
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 10;
+  let query = supabase
+    .from("fixtures")
+    .select("*, tournament:tournaments(name), home_participant:participants!fixtures_home_participant_id_fkey(display_name), away_participant:participants!fixtures_away_participant_id_fkey(display_name)", {
+      count: "exact",
+    })
+    .order("scheduled_at")
+    .range((page - 1) * pageSize, page * pageSize - 1);
+  if (params.status) query = query.eq("status", params.status);
+  const { data, count } = await query;
+  const rows = (data ?? []).map((fixture) => ({
+    ...fixture,
+    tournament_name: fixture.tournament?.name ?? fixture.tournament_id,
+    home_name: fixture.home_participant?.display_name ?? fixture.home_participant_id,
+    away_name: fixture.away_participant?.display_name ?? fixture.away_participant_id,
+  }));
+  return { rows, total: count ?? 0, page, pageSize };
 }
 
 export async function getAdminCollectionDetail(id: string) {
