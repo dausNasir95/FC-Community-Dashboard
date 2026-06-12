@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { archiveRecord, createRecord, togglePublished } from "@/lib/actions/admin-records";
 import { AdminResourceTable } from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,9 @@ export function ResourceManager({
         columns={columns}
         actions={(row) => (
           <>
+            <Button asChild variant="ghost">
+              <Link href={`/admin/${resource}/${String(row.id)}`}>{resource === "collections" ? "Manage" : "Edit"}</Link>
+            </Button>
             {["posters", "tournaments", "collections"].includes(resource) ? (
               <form action={togglePublished.bind(null, resource as "posters" | "tournaments" | "collections")}>
                 <input type="hidden" name="id" value={String(row.id)} />

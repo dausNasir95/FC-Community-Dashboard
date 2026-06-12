@@ -1,6 +1,6 @@
 import * as mock from "@/lib/mock-data";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/server";
-import type { ListParams, Paginated } from "@/types/domain";
+import type { Collection, CollectionParticipant, ListParams, Paginated, Participant } from "@/types/domain";
 
 function paginate<T>(rows: T[], params: ListParams = {}): Paginated<T> {
   const page = params.page ?? 1;
@@ -65,4 +65,36 @@ export async function listAdminTable(table: keyof typeof tableMocks, params: Lis
   if (params.status) query = query.eq("status", params.status);
   const { data, count } = await query;
   return { rows: data ?? [], total: count ?? 0, page, pageSize };
+}
+
+export async function getAdminCollectionDetail(id: string) {
+  if (!hasSupabaseEnv()) {
+    const collection = mock.collections.find((row) => row.id === id) ?? null;
+    return {
+      collection,
+      collectionParticipants: mock.collectionParticipants.filter((row) => row.collection_id === id),
+      participants: mock.participants,
+    };
+  }
+
+  const supabase = await createClient();
+  const [{ data: collection }, { data: collectionParticipants }, { data: participants }] = await Promise.all([
+    supabase.from("collections").select("*").eq("id", id).single(),
+    supabase
+      .from("collection_participants")
+      .select("*, participant:participants(id, display_name, ea_id, psn_id, platform, team_name, social_username, status)")
+      .eq("collection_id", id)
+      .order("joined_at", { ascending: false }),
+    supabase
+      .from("participants")
+      .select("id, display_name, ea_id, psn_id, platform, team_name, social_username, status")
+      .neq("status", "Archived")
+      .order("display_name"),
+  ]);
+
+  return {
+    collection: collection as Collection | null,
+    collectionParticipants: (collectionParticipants ?? []) as unknown as CollectionParticipant[],
+    participants: (participants ?? []) as Participant[],
+  };
 }
