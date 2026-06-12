@@ -70,8 +70,8 @@ export default async function AdminCollectionDetailPage({
                 ))}
               </Select>
             </Field>
-            <Field label="Target amount (sen)">
-              <Input name="target_amount" type="number" min="0" step="1" required defaultValue={String(toCents(detail.collection.target_amount))} />
+            <Field label="Target amount (RM)">
+              <Input name="target_amount" type="number" min="0" step="0.01" required defaultValue={String(toRinggit(detail.collection.target_amount))} />
             </Field>
             <Field label="Start date">
               <Input name="start_date" type="datetime-local" defaultValue={toDateInput(detail.collection.start_date)} />
@@ -123,8 +123,8 @@ export default async function AdminCollectionDetailPage({
                 ))}
               </Select>
             </Field>
-            <Field label="Required amount (sen)">
-              <Input name="required_amount" type="number" min="0" step="1" placeholder="5000 = RM50.00" required />
+            <Field label="Required amount (RM)">
+              <Input name="required_amount" type="number" min="0" step="0.01" placeholder="35.00" required />
             </Field>
             <Field label="Due date">
               <Input name="due_date" type="datetime-local" />
@@ -159,8 +159,8 @@ export default async function AdminCollectionDetailPage({
                 <StatusBadge status={row.payment_status} />
               </div>
               <div className="grid gap-4 md:grid-cols-4">
-                <Field label="Required amount (sen)">
-                  <Input name="required_amount" type="number" min="0" step="1" defaultValue={String(toCents(row.required_amount))} />
+                <Field label="Required amount (RM)">
+                  <Input name="required_amount" type="number" min="0" step="0.01" defaultValue={String(toRinggit(row.required_amount))} />
                 </Field>
                 <Field label="Payment status">
                   <Select name="payment_status" defaultValue={row.payment_status}>
@@ -201,6 +201,10 @@ export default async function AdminCollectionDetailPage({
 
 function toCents(amount: number) {
   return Number.isInteger(amount) && amount > 1000 ? amount : Math.round(amount * 100);
+}
+
+function toRinggit(amount: number) {
+  return Number.isInteger(amount) && amount > 1000 ? (amount / 100).toFixed(2) : amount.toFixed(2);
 }
 
 function toDateInput(value: string | null | undefined) {

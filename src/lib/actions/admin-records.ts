@@ -117,7 +117,7 @@ export async function togglePublished(table: "posters" | "tournaments" | "collec
 export async function addCollectionParticipant(collectionId: string, formData: FormData) {
   const admin = await requireAdmin();
   const participantId = String(formData.get("participant_id") ?? "");
-  const requiredAmount = Number(formData.get("required_amount") ?? 0) / 100;
+  const requiredAmount = Number(formData.get("required_amount") ?? 0);
   const dueDate = String(formData.get("due_date") ?? "") || null;
   const adminNotes = String(formData.get("admin_notes") ?? "") || null;
 
@@ -152,7 +152,7 @@ export async function addCollectionParticipant(collectionId: string, formData: F
 export async function updateCollectionParticipant(collectionId: string, formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const requiredAmount = Number(formData.get("required_amount") ?? 0) / 100;
+  const requiredAmount = Number(formData.get("required_amount") ?? 0);
   const paymentStatus = String(formData.get("payment_status") ?? "Unpaid");
   const dueDate = String(formData.get("due_date") ?? "") || null;
   const isWaived = String(formData.get("is_waived")) === "true";

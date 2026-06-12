@@ -109,7 +109,7 @@ function ResourceFields({ resource }: { resource: Resource }) {
         <Field label="Category">
           <StatusSelect name="category" values={["Tournament fee", "Registration fee", "Venue fee", "Jersey payment", "Event contribution", "Prize pool", "Other"]} />
         </Field>
-        <Field label="Target amount (sen)"><Input name="target_amount" type="number" min="0" step="1" placeholder="5000 = RM50.00" required /></Field>
+        <Field label="Target amount (RM)"><Input name="target_amount" type="number" min="0" step="0.01" placeholder="35.00" required /></Field>
         <Field label="Start date"><Input name="start_date" type="datetime-local" /></Field>
         <Field label="Due date"><Input name="due_date" type="datetime-local" /></Field>
         <Field label="Related tournament ID"><Input name="tournament_id" /></Field>

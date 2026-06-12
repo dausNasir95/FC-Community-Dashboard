@@ -57,6 +57,6 @@ export const collectionSchema = z.object({
 }).refine((value) => !value.start_date || !value.due_date || new Date(value.due_date) >= new Date(value.start_date), {
   path: ["due_date"],
   message: "Due date cannot be earlier than start date.",
-}).transform((value) => ({ ...value, slug: value.slug || slugify(value.title), target_amount: value.target_amount / 100 }));
+}).transform((value) => ({ ...value, slug: value.slug || slugify(value.title) }));
 
 export { fixtureInputSchema } from "@/lib/services/fixtures";
