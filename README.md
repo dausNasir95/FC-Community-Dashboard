@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FC26 Community Dashboard
 
-## Getting Started
+Production-ready Next.js App Router application for FC26 community posters, tournaments, fixtures, standings, participant records, and collections.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router, React 19, TypeScript
+- Tailwind CSS 4 and shadcn-style local UI primitives
+- Supabase PostgreSQL, Authentication, Storage, and Row Level Security
+- Zod, React Hook Form-ready schemas, server actions
+- Vitest for business-logic tests
+- Vercel deployment and GitHub source control
+
+## Local Setup
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Without Supabase environment variables, the app renders development seed data and allows the admin dashboard in dev mode. Set Supabase variables to use real authentication and database reads/writes.
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Run `supabase/migrations/001_initial_schema.sql` in the SQL editor or with the Supabase CLI.
+3. Run `supabase/seed/seed.sql` for development data.
+4. Create your first user in Supabase Auth.
+5. Insert a matching profile:
+
+```sql
+insert into public.profiles (id, email, display_name, role)
+values ('AUTH_USER_ID', 'admin@example.com', 'Community Admin', 'super_admin');
+```
+
+## Environment Variables
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SITE_URL=
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is for secure server-side code only. Never expose it to client components.
+
+## Database and Security
+
+The migration creates normalized tables for profiles, posters, tournaments, participants, tournament assignments, fixtures, standings, collections, collection assignments, and activity logs. UUID primary keys, foreign keys, check constraints, unique constraints, indexes, and `updated_at` triggers are included.
+
+RLS is enabled on all application tables. Public users can only read published posters, tournaments, fixtures/standings tied to published tournaments, published collections, and participant data through the `public_participants` view. Private participant fields such as phone numbers, notes, and `created_by` are never exposed through public queries.
+
+Storage buckets are created for `posters`, `tournaments`, and `collections` with JPEG, PNG, and WebP limits up to 5 MB. Upload/update/delete policies require an authenticated admin profile.
+
+## Admin
+
+Routes:
+
+- `/admin/login`
+- `/admin`
+- `/admin/posters`
+- `/admin/tournaments`
+- `/admin/fixtures`
+- `/admin/standings`
+- `/admin/participants`
+- `/admin/collections`
+- `/admin/settings`
+
+Middleware protects every `/admin` route except login when Supabase env vars are configured. The role model supports `super_admin`, `admin`, and `moderator`.
+
+## Development Commands
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Push this repository to GitHub.
+2. Import it into Vercel.
+3. Add the environment variables in Vercel project settings.
+4. Run the Supabase migration before first deployment.
+5. Configure Supabase Auth redirect URLs to include your Vercel domain.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Troubleshooting
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- If admin login loops, confirm the user has a `profiles` row with an admin role.
+- If images fail to upload, confirm the storage buckets and policies from the migration exist.
+- If public pages are empty, verify records are published and not archived.
+- If mutations fail, check RLS policies and that the active user passes `public.is_admin()`.
