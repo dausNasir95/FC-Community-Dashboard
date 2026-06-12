@@ -17,7 +17,7 @@ const schemas = {
 };
 
 function objectFromForm(formData: FormData) {
-  return Object.fromEntries(Array.from(formData.entries()).filter(([, value]) => value !== ""));
+  return Object.fromEntries(Array.from(formData.entries()).filter(([, value]) => value !== "")) as Record<string, unknown>;
 }
 
 export async function createRecord(table: MutableTable, formData: FormData) {
@@ -41,6 +41,38 @@ export async function createRecord(table: MutableTable, formData: FormData) {
   }
   revalidatePath(`/admin/${table}`);
   redirect(`/admin/${table}?success=created`);
+}
+
+export async function updateRecord(table: MutableTable, id: string, formData: FormData) {
+  const admin = await requireAdmin();
+  const payload = objectFromForm(formData);
+  if (table === "collections") {
+    payload.tournament_id = String(formData.get("tournament_id") ?? "") || null;
+    payload.start_date = String(formData.get("start_date") ?? "") || null;
+    payload.due_date = String(formData.get("due_date") ?? "") || null;
+  }
+  const parsed = schemas[table].safeParse(payload);
+  const returnPath = `/admin/${table}/${id}`;
+  if (!parsed.success) {
+    redirect(`${returnPath}?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Validation failed")}`);
+  }
+
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const { error } = await supabase.from(table).update(parsed.data as never).eq("id", id);
+    if (error) redirect(`${returnPath}?error=${encodeURIComponent(error.message)}`);
+    await supabase.from("activity_logs").insert({
+      admin_id: admin.id,
+      action: "update",
+      entity_type: table,
+      entity_id: id,
+      description: `Updated ${table} record`,
+    });
+  }
+
+  revalidatePath(`/admin/${table}`);
+  revalidatePath(returnPath);
+  redirect(`${returnPath}?success=updated`);
 }
 
 export async function archiveRecord(table: MutableTable, formData: FormData) {

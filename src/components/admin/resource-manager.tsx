@@ -44,9 +44,11 @@ export function ResourceManager({
         columns={columns}
         actions={(row) => (
           <>
-            <Button asChild variant="ghost">
-              <Link href={`/admin/${resource}/${String(row.id)}`}>{resource === "collections" ? "Manage" : "Edit"}</Link>
-            </Button>
+            {["collections", "posters"].includes(resource) ? (
+              <Button asChild variant="ghost">
+                <Link href={`/admin/${resource}/${String(row.id)}`}>{resource === "collections" ? "Manage / Edit" : "Edit"}</Link>
+              </Button>
+            ) : null}
             {["posters", "tournaments", "collections"].includes(resource) ? (
               <form action={togglePublished.bind(null, resource as "posters" | "tournaments" | "collections")}>
                 <input type="hidden" name="id" value={String(row.id)} />

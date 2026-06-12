@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { addCollectionParticipant, updateCollectionParticipant } from "@/lib/actions/admin-records";
-import { getAdminCollectionDetail } from "@/lib/data/admin";
+import { addCollectionParticipant, updateCollectionParticipant, updateRecord } from "@/lib/actions/admin-records";
+import { getAdminCollectionDetail, getAdminTournaments } from "@/lib/data/admin";
 import { formatDate } from "@/lib/utils";
 import { formatMYR } from "@/lib/services/payments";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,13 @@ export default async function AdminCollectionDetailPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const detail = await getAdminCollectionDetail(id);
+  const [detail, tournaments] = await Promise.all([getAdminCollectionDetail(id), getAdminTournaments()]);
   if (!detail.collection) notFound();
   const assignedIds = new Set(detail.collectionParticipants.map((row) => row.participant_id));
   const availableParticipants = detail.participants.filter((participant) => !assignedIds.has(participant.id));
   const addParticipant = addCollectionParticipant.bind(null, id);
   const updateParticipant = updateCollectionParticipant.bind(null, id);
+  const updateCollection = updateRecord.bind(null, "collections", id);
 
   return (
     <div className="space-y-6">
@@ -44,6 +45,67 @@ export default async function AdminCollectionDetailPage({
       {query.error ? (
         <p className="rounded-md border border-red-400/40 bg-red-950/30 p-3 text-sm text-red-200">{query.error}</p>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Edit collection fields</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={updateCollection} className="grid gap-4 md:grid-cols-2">
+            <Field label="Collection title">
+              <Input name="title" required defaultValue={detail.collection.title} />
+            </Field>
+            <Field label="Slug">
+              <Input name="slug" required defaultValue={detail.collection.slug} />
+            </Field>
+            <div className="md:col-span-2">
+              <Field label="Description">
+                <Textarea name="description" required defaultValue={detail.collection.description} />
+              </Field>
+            </div>
+            <Field label="Category">
+              <Select name="category" required defaultValue={detail.collection.category}>
+                {["Tournament fee", "Registration fee", "Venue fee", "Jersey payment", "Event contribution", "Prize pool", "Other"].map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Target amount (sen)">
+              <Input name="target_amount" type="number" min="0" step="1" required defaultValue={String(toCents(detail.collection.target_amount))} />
+            </Field>
+            <Field label="Start date">
+              <Input name="start_date" type="datetime-local" defaultValue={toDateInput(detail.collection.start_date)} />
+            </Field>
+            <Field label="Due date">
+              <Input name="due_date" type="datetime-local" defaultValue={toDateInput(detail.collection.due_date)} />
+            </Field>
+            <Field label="Related tournament">
+              <Select name="tournament_id" defaultValue={detail.collection.tournament_id ?? ""}>
+                <option value="">No tournament</option>
+                {tournaments.map((tournament) => (
+                  <option key={tournament.id} value={tournament.id}>
+                    {tournament.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Status">
+              <Select name="status" required defaultValue={detail.collection.status}>
+                {["Draft", "Open", "Partially Collected", "Fully Collected", "Overdue", "Closed", "Cancelled", "Archived"].map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </Select>
+            </Field>
+            <input type="hidden" name="currency" value="MYR" />
+            <label className="flex items-center gap-2 text-sm text-[#cde8d4]">
+              <input name="is_published" type="checkbox" value="true" defaultChecked={detail.collection.is_published} /> Published
+            </label>
+            <div className="md:col-span-2">
+              <Button type="submit">Save collection fields</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -139,4 +201,8 @@ export default async function AdminCollectionDetailPage({
 
 function toCents(amount: number) {
   return Number.isInteger(amount) && amount > 1000 ? amount : Math.round(amount * 100);
+}
+
+function toDateInput(value: string | null | undefined) {
+  return value ? value.slice(0, 16) : "";
 }

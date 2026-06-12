@@ -1,6 +1,6 @@
 import * as mock from "@/lib/mock-data";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/server";
-import type { Collection, CollectionParticipant, ListParams, Paginated, Participant } from "@/types/domain";
+import type { Collection, CollectionParticipant, ListParams, Paginated, Participant, Poster, Tournament } from "@/types/domain";
 
 function paginate<T>(rows: T[], params: ListParams = {}): Paginated<T> {
   const page = params.page ?? 1;
@@ -67,6 +67,20 @@ export async function listAdminTable(table: keyof typeof tableMocks, params: Lis
   return { rows: data ?? [], total: count ?? 0, page, pageSize };
 }
 
+export async function getAdminRecord(table: keyof typeof tableMocks, id: string) {
+  if (!hasSupabaseEnv()) return tableMocks[table].find((row) => row.id === id) ?? null;
+  const supabase = await createClient();
+  const { data } = await supabase.from(table).select("*").eq("id", id).single();
+  return data;
+}
+
+export async function getAdminTournaments() {
+  if (!hasSupabaseEnv()) return mock.tournaments;
+  const supabase = await createClient();
+  const { data } = await supabase.from("tournaments").select("id,name,slug,status").order("name");
+  return (data ?? []) as Tournament[];
+}
+
 export async function getAdminCollectionDetail(id: string) {
   if (!hasSupabaseEnv()) {
     const collection = mock.collections.find((row) => row.id === id) ?? null;
@@ -98,3 +112,6 @@ export async function getAdminCollectionDetail(id: string) {
     participants: (participants ?? []) as Participant[],
   };
 }
+
+export type EditablePoster = Poster;
+export type EditableCollection = Collection;
