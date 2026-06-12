@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import * as mock from "@/lib/mock-data";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/server";
 import type { Collection, Fixture, ListParams, Paginated, Poster, PublicParticipant, Tournament } from "@/types/domain";
@@ -10,6 +11,7 @@ function paginate<T>(rows: T[], params: ListParams = {}): Paginated<T> {
 }
 
 export async function getHomeData() {
+  await connection();
   const [posters, tournaments, fixtures, collections] = await Promise.all([
     getPosters({ pageSize: 3 }),
     getTournaments(),
@@ -27,6 +29,7 @@ export async function getHomeData() {
 }
 
 export async function getPosters(params: ListParams = {}) {
+  await connection();
   if (!hasSupabaseEnv()) {
     const rows = mock.posters
       .filter((poster) => poster.is_published)
@@ -48,6 +51,7 @@ export async function getPosters(params: ListParams = {}) {
 }
 
 export async function getPosterBySlug(slug: string) {
+  await connection();
   if (!hasSupabaseEnv()) return mock.posters.find((poster) => poster.slug === slug && poster.is_published) ?? null;
   const supabase = await createClient();
   const { data } = await supabase.from("posters").select("*").eq("slug", slug).eq("is_published", true).single();
@@ -55,6 +59,7 @@ export async function getPosterBySlug(slug: string) {
 }
 
 export async function getTournaments() {
+  await connection();
   if (!hasSupabaseEnv()) return mock.tournaments.filter((tournament) => tournament.is_published);
   const supabase = await createClient();
   const { data } = await supabase.from("tournaments").select("*").eq("is_published", true).order("start_date");
@@ -62,6 +67,7 @@ export async function getTournaments() {
 }
 
 export async function getTournamentBySlug(slug: string) {
+  await connection();
   if (!hasSupabaseEnv()) return mock.tournaments.find((tournament) => tournament.slug === slug && tournament.is_published) ?? null;
   const supabase = await createClient();
   const { data } = await supabase.from("tournaments").select("*").eq("slug", slug).eq("is_published", true).single();
@@ -69,6 +75,7 @@ export async function getTournamentBySlug(slug: string) {
 }
 
 export async function getTournamentDetail(slug: string) {
+  await connection();
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) return null;
   if (!hasSupabaseEnv()) {
@@ -97,6 +104,7 @@ export async function getTournamentDetail(slug: string) {
 }
 
 export async function getFixtures(params: ListParams & { matchday?: string; round?: string } = {}) {
+  await connection();
   if (!hasSupabaseEnv()) {
     const rows = mock.fixtures
       .filter((fixture) => fixture.tournament?.is_published)
@@ -122,6 +130,7 @@ export async function getFixtures(params: ListParams & { matchday?: string; roun
 }
 
 export async function getCollections(params: ListParams = {}) {
+  await connection();
   if (!hasSupabaseEnv()) return paginate(mock.collections.filter((collection) => collection.is_published), params);
   const supabase = await createClient();
   const page = params.page ?? 1;
@@ -136,6 +145,7 @@ export async function getCollections(params: ListParams = {}) {
 }
 
 export async function getCollectionDetail(slug: string) {
+  await connection();
   if (!hasSupabaseEnv()) {
     const collection = mock.collections.find((row) => row.slug === slug && row.is_published);
     if (!collection) return null;
