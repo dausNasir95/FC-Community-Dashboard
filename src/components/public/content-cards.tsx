@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { CalendarDays, Users } from "lucide-react";
+import { CalendarDays, CircleDollarSign, Users } from "lucide-react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
+import { formatMYR } from "@/lib/services/payments";
 import type { Collection, Fixture, Poster, Tournament } from "@/types/domain";
 
 export function PosterCard({ poster }: { poster: Poster }) {
@@ -49,16 +50,29 @@ export function TournamentCard({ tournament }: { tournament: Tournament }) {
 export function CollectionCard({ collection }: { collection: Collection }) {
   return (
     <Link href={`/collections/${collection.slug}`}>
-      <Card className="h-full overflow-hidden transition hover:border-[#39ff88]/70">
-        <div className="aspect-[16/9] bg-cover bg-center" style={{ backgroundImage: `url(${collection.cover_image_url ?? ""})` }} />
+      <Card className="h-full transition hover:border-[#39ff88]/70">
         <CardContent className="pt-5">
-          <StatusBadge status={collection.status} />
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge status={collection.status} />
+            <Badge>{collection.category}</Badge>
+          </div>
           <h3 className="mt-3 text-lg font-semibold text-white">{collection.title}</h3>
           <p className="mt-2 line-clamp-2 text-sm text-[#9fb6a7]">{collection.description}</p>
-          <p className="mt-4 flex items-center gap-2 text-sm text-[#39ff88]">
-            <Users size={15} />
-            {collection.participant_count ?? 0} participants
-          </p>
+          <div className="mt-5 h-2 overflow-hidden rounded-full bg-[#17261c]">
+            <div className="h-full bg-[#39ff88]" style={{ width: `${Math.min(collection.progress_percentage ?? 0, 100)}%` }} />
+          </div>
+          <div className="mt-4 grid gap-2 text-sm text-[#cbe5d2]">
+            <p className="flex items-center gap-2 text-[#39ff88]">
+              <CircleDollarSign size={15} />
+              {formatMYR(collection.total_collected ?? 0)} collected
+            </p>
+            <p>Target: {formatMYR(collection.target_amount)}</p>
+            <p>Remaining: {formatMYR(collection.remaining_amount ?? collection.target_amount)}</p>
+            <p className="flex items-center gap-2">
+              <Users size={15} />
+              {collection.participant_count ?? 0} participants
+            </p>
+          </div>
         </CardContent>
       </Card>
     </Link>

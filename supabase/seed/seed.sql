@@ -32,13 +32,13 @@ insert into public.standings (tournament_id, participant_id, played, won, drawn,
 values
 ('11111111-1111-1111-1111-111111111111','aaaaaaaa-0000-0000-0000-000000000001',0,0,0,0,0,0,0,0,0,0,1);
 
-insert into public.collections (id, title, slug, description, cover_image_url, status, is_published)
+insert into public.collections (id, title, slug, description, category, currency, target_amount, start_date, due_date, tournament_id, status, is_published)
 values
-('33333333-3333-3333-3333-333333333333','Community Members','community-members','Active FC26 community members available for events and tournaments.','https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80','Active',true),
-('44444444-4444-4444-4444-444444444444','Division 1 Players','division-1-players','Top ranked players and playoff hopefuls.','https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=1200&q=80','Active',true);
+('33333333-3333-3333-3333-333333333333','Super League Season 3 Registration Fee','super-league-season-3-registration-fee','Registration payment campaign for Clorox Super League Season 3 participants.','Registration fee','MYR',3200.00,'2026-06-15T00:00:00Z','2026-07-10T23:59:00Z','11111111-1111-1111-1111-111111111111','Open',true),
+('44444444-4444-4444-4444-444444444444','Prize Pool Collection','prize-pool-collection','Community prize pool contribution for finalists and weekly awards.','Prize pool','MYR',5000.00,'2026-06-01T00:00:00Z','2026-06-30T23:59:00Z','22222222-2222-2222-2222-222222222222','Partially Collected',true);
 
-insert into public.collection_participants (collection_id, participant_id, registration_status)
-select '33333333-3333-3333-3333-333333333333', id, 'Confirmed' from public.participants;
+insert into public.collection_participants (collection_id, participant_id, required_amount, payment_status, due_date)
+select '33333333-3333-3333-3333-333333333333', id, 40.00, 'Unpaid', '2026-07-10T23:59:00Z' from public.participants;
 
 insert into public.activity_logs (action, entity_type, description)
 values ('seed','system','Development seed data loaded. No real credentials included.');

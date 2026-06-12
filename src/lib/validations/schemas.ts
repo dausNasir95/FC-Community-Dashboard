@@ -46,9 +46,17 @@ export const collectionSchema = z.object({
   title: z.string().min(2),
   slug: slug.optional(),
   description: z.string().min(10),
-  cover_image_url: z.url().nullable().optional(),
-  status: z.enum(["Active", "Inactive", "Archived"]),
+  category: z.enum(["Tournament fee", "Registration fee", "Venue fee", "Jersey payment", "Event contribution", "Prize pool", "Other"]),
+  currency: z.literal("MYR").default("MYR"),
+  target_amount: z.coerce.number().min(0),
+  start_date: z.string().optional().nullable(),
+  due_date: z.string().optional().nullable(),
+  tournament_id: z.string().optional().nullable(),
+  status: z.enum(["Draft", "Open", "Partially Collected", "Fully Collected", "Overdue", "Closed", "Cancelled", "Archived"]),
   is_published: z.coerce.boolean().default(false),
-}).transform((value) => ({ ...value, slug: value.slug || slugify(value.title) }));
+}).refine((value) => !value.start_date || !value.due_date || new Date(value.due_date) >= new Date(value.start_date), {
+  path: ["due_date"],
+  message: "Due date cannot be earlier than start date.",
+}).transform((value) => ({ ...value, slug: value.slug || slugify(value.title), target_amount: value.target_amount / 100 }));
 
 export { fixtureInputSchema } from "@/lib/services/fixtures";

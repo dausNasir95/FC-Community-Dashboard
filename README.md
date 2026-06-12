@@ -1,6 +1,6 @@
 # FC26 Community Dashboard
 
-Production-ready Next.js App Router application for FC26 community posters, tournaments, fixtures, standings, participant records, and collections.
+Production-ready Next.js App Router application for FC26 community posters, tournaments, fixtures, standings, participant records, and payment collections.
 
 ## Stack
 
@@ -47,11 +47,11 @@ NEXT_PUBLIC_SITE_URL=
 
 ## Database and Security
 
-The migration creates normalized tables for profiles, posters, tournaments, participants, tournament assignments, fixtures, standings, collections, collection assignments, and activity logs. UUID primary keys, foreign keys, check constraints, unique constraints, indexes, and `updated_at` triggers are included.
+The migrations create normalized tables for profiles, posters, tournaments, participants, tournament assignments, fixtures, standings, payment collections, collection participant payment obligations, payments, refunds, and activity logs. UUID primary keys, foreign keys, check constraints, unique constraints, indexes, and `updated_at` triggers are included.
 
-RLS is enabled on all application tables. Public users can only read published posters, tournaments, fixtures/standings tied to published tournaments, published collections, and participant data through the `public_participants` view. Private participant fields such as phone numbers, notes, and `created_by` are never exposed through public queries.
+RLS is enabled on all application tables. Public users can only read published posters, tournaments, fixtures/standings tied to published tournaments, published payment collection summaries, and participant data through safe public views. Private participant fields, payment references, receipt URLs, internal notes, verification details, and admin identity are never exposed through public queries.
 
-Storage buckets are created for `posters`, `tournaments`, and `collections` with JPEG, PNG, and WebP limits up to 5 MB. Upload/update/delete policies require an authenticated admin profile.
+Storage buckets are created for `posters`, `tournaments`, and `collections` with JPEG, PNG, and WebP limits up to 5 MB. A private `payment-receipts` bucket accepts JPEG, PNG, WebP, and PDF files up to 5 MB. Upload/update/delete policies require an authenticated admin profile.
 
 ## Admin
 

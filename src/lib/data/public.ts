@@ -1,7 +1,8 @@
 import { connection } from "next/server";
 import * as mock from "@/lib/mock-data";
+import { calculateCollectionSummary } from "@/lib/services/payments";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/server";
-import type { Collection, Fixture, ListParams, Paginated, Poster, PublicParticipant, Tournament } from "@/types/domain";
+import type { Collection, CollectionParticipant, Fixture, ListParams, Paginated, Poster, Tournament } from "@/types/domain";
 
 function paginate<T>(rows: T[], params: ListParams = {}): Paginated<T> {
   const page = params.page ?? 1;
@@ -131,14 +132,25 @@ export async function getFixtures(params: ListParams & { matchday?: string; roun
 
 export async function getCollections(params: ListParams = {}) {
   await connection();
-  if (!hasSupabaseEnv()) return paginate(mock.collections.filter((collection) => collection.is_published), params);
+  if (!hasSupabaseEnv()) {
+    const rows = mock.collections
+      .filter((collection) => collection.is_published)
+      .map((collection) => {
+        const summary = calculateCollectionSummary(
+          collection,
+          mock.collectionParticipants.filter((row) => row.collection_id === collection.id),
+          mock.payments.filter((payment) => payment.collection_id === collection.id),
+        );
+        return summary.collection;
+      });
+    return paginate(rows, params);
+  }
   const supabase = await createClient();
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 12;
   const { data, count } = await supabase
-    .from("collections")
+    .from("public_collection_summaries")
     .select("*", { count: "exact" })
-    .eq("is_published", true)
     .order("updated_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
   return { rows: (data ?? []) as Collection[], total: count ?? 0, page, pageSize };
@@ -149,18 +161,19 @@ export async function getCollectionDetail(slug: string) {
   if (!hasSupabaseEnv()) {
     const collection = mock.collections.find((row) => row.slug === slug && row.is_published);
     if (!collection) return null;
-    const participants = mock.collectionParticipants
-      .filter((row) => row.collection_id === collection.id)
-      .map((row) => ({ ...row, participant: row.participant as PublicParticipant }));
-    return { collection, participants };
+    return calculateCollectionSummary(
+      collection,
+      mock.collectionParticipants.filter((row) => row.collection_id === collection.id),
+      mock.payments.filter((payment) => payment.collection_id === collection.id),
+    );
   }
   const supabase = await createClient();
-  const { data: collection } = await supabase.from("collections").select("*").eq("slug", slug).eq("is_published", true).single();
+  const { data: collection } = await supabase.from("public_collection_summaries").select("*").eq("slug", slug).single();
   if (!collection) return null;
   const { data: participants } = await supabase
     .from("collection_participants")
-    .select("*, participant:public_participants(*)")
+    .select("id, collection_id, participant_id, required_amount, payment_status, due_date, is_waived, joined_at, updated_at, participant:public_participants(*)")
     .eq("collection_id", collection.id)
     .order("joined_at", { ascending: false });
-  return { collection: collection as Collection, participants: participants ?? [] };
+  return { collection: collection as Collection, participants: (participants ?? []) as unknown as CollectionParticipant[] };
 }

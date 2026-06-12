@@ -3,7 +3,26 @@ export type AdminRole = "super_admin" | "admin" | "moderator";
 export type PosterStatus = "Upcoming" | "Ongoing" | "Completed" | "Cancelled";
 export type TournamentStatus = "Draft" | "Upcoming" | "Ongoing" | "Completed" | "Cancelled" | "Archived";
 export type FixtureStatus = "Scheduled" | "Live" | "Completed" | "Postponed" | "Cancelled";
-export type CollectionStatus = "Active" | "Inactive" | "Archived";
+export type CollectionStatus =
+  | "Draft"
+  | "Open"
+  | "Partially Collected"
+  | "Fully Collected"
+  | "Overdue"
+  | "Closed"
+  | "Cancelled"
+  | "Archived";
+export type CollectionCategory =
+  | "Tournament fee"
+  | "Registration fee"
+  | "Venue fee"
+  | "Jersey payment"
+  | "Event contribution"
+  | "Prize pool"
+  | "Other";
+export type PaymentStatus = "Unpaid" | "Partially Paid" | "Paid" | "Overpaid" | "Waived" | "Refunded" | "Cancelled";
+export type PaymentMethod = "Cash" | "Bank Transfer" | "DuitNow" | "Touch 'n Go eWallet" | "Online Banking" | "Other";
+export type VerificationStatus = "Pending" | "Verified" | "Rejected" | "Refunded";
 export type ParticipantStatus = "Active" | "Inactive" | "Suspended" | "Archived";
 
 export type Poster = {
@@ -104,21 +123,70 @@ export type Collection = {
   title: string;
   slug: string;
   description: string;
-  cover_image_url: string | null;
+  category: CollectionCategory;
+  currency: "MYR";
+  target_amount: number;
+  total_collected?: number;
+  remaining_amount?: number;
+  excess_amount?: number;
+  progress_percentage?: number;
+  start_date: string | null;
+  due_date: string | null;
+  tournament_id: string | null;
+  tournament?: Pick<Tournament, "name" | "slug"> | null;
   status: CollectionStatus;
   is_published: boolean;
   created_at: string;
   updated_at: string;
   participant_count?: number;
+  paid_participant_count?: number;
+  unpaid_participant_count?: number;
+  partially_paid_participant_count?: number;
 };
 
 export type CollectionParticipant = {
   id: string;
   collection_id: string;
   participant_id: string;
-  registration_status: string | null;
+  required_amount: number;
+  total_paid?: number;
+  outstanding_amount?: number;
+  payment_status: PaymentStatus;
+  due_date: string | null;
+  is_waived: boolean;
+  admin_notes?: string | null;
   joined_at: string;
+  updated_at: string;
   participant?: PublicParticipant;
+};
+
+export type Payment = {
+  id: string;
+  collection_id: string;
+  collection_participant_id: string;
+  participant_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: PaymentMethod;
+  payment_reference: string | null;
+  receipt_url: string | null;
+  verification_status: VerificationStatus;
+  verified_by: string | null;
+  verified_at: string | null;
+  internal_notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentRefund = {
+  id: string;
+  payment_id: string;
+  amount: number;
+  reason: string;
+  refunded_at: string;
+  refunded_by: string | null;
+  created_at: string;
 };
 
 export type ActivityLog = {

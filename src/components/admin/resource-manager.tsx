@@ -94,6 +94,27 @@ function ResourceFields({ resource }: { resource: Resource }) {
   }
   const isPoster = resource === "posters";
   const isTournament = resource === "tournaments";
+  if (resource === "collections") {
+    return (
+      <>
+        <Field label="Collection title"><Input name="title" required /></Field>
+        <Field label="Slug"><Input name="slug" placeholder="auto-generated when empty" /></Field>
+        <div className="md:col-span-2"><Field label="Description"><Textarea name="description" required /></Field></div>
+        <Field label="Category">
+          <StatusSelect name="category" values={["Tournament fee", "Registration fee", "Venue fee", "Jersey payment", "Event contribution", "Prize pool", "Other"]} />
+        </Field>
+        <Field label="Target amount (sen)"><Input name="target_amount" type="number" min="0" step="1" placeholder="5000 = RM50.00" required /></Field>
+        <Field label="Start date"><Input name="start_date" type="datetime-local" /></Field>
+        <Field label="Due date"><Input name="due_date" type="datetime-local" /></Field>
+        <Field label="Related tournament ID"><Input name="tournament_id" /></Field>
+        <Field label="Status">
+          <StatusSelect name="status" values={["Draft", "Open", "Partially Collected", "Fully Collected", "Overdue", "Closed", "Cancelled", "Archived"]} />
+        </Field>
+        <input type="hidden" name="currency" value="MYR" />
+        <label className="flex items-center gap-2 text-sm text-[#cde8d4]"><input name="is_published" type="checkbox" value="true" /> Published</label>
+      </>
+    );
+  }
   return (
     <>
       <Field label={isTournament ? "Name" : "Title"}><Input name={isTournament ? "name" : "title"} required /></Field>
@@ -110,7 +131,6 @@ function ResourceFields({ resource }: { resource: Resource }) {
       {isTournament ? <Field label="Registration URL"><Input name="registration_url" type="url" /></Field> : null}
       {isTournament ? <Field label="Maximum participants"><Input name="maximum_participants" type="number" min="1" /></Field> : null}
       {isTournament ? <Field label="Status"><StatusSelect name="status" values={["Draft", "Upcoming", "Ongoing", "Completed", "Cancelled", "Archived"]} /></Field> : null}
-      {resource === "collections" ? <Field label="Status"><StatusSelect name="status" values={["Active", "Inactive", "Archived"]} /></Field> : null}
       <label className="flex items-center gap-2 text-sm text-[#cde8d4]"><input name="is_published" type="checkbox" value="true" /> Published</label>
       {isPoster ? <label className="flex items-center gap-2 text-sm text-[#cde8d4]"><input name="is_featured" type="checkbox" value="true" /> Featured</label> : null}
     </>
